@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Traffic Analyzer - Interactive Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header Section */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.9;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .start-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .stop-btn {
+            background: linear-gradient(45deg, #f44336, #da190b);
+            color: white;
+        }
+
+        .local-btn {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+            color: white;
+        }
+
+        .clear-btn {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            color: white;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .status-card h3 {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+
+        .status-card .value {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .connection-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .connected { background: #4CAF50; }
+        .disconnected { background: #f44336; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+        }
+
+        /* Main Dashboard */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .panel h2 {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Graph Container */
+        .graph-container {
+            height: 600px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        /* Network Visualization */
+        .network-canvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .network-node {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-align: center;
+            word-break: break-all;
+            padding: 2px;
+        }
+
+        .network-node:hover {
+            transform: scale(1.2);
+            z-index: 100;
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        .network-edge {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            transform-origin: left center;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .local-node { background: #4CAF50; }
+        .external-node { background: #2196F3; }
+        .broadcast-node { background: #FF9800; }
+        .multicast-node { background: #9C27B0; }
+
+        /* Info Panel */
+        .info-panel {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .packet-list {
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .packet-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid transparent;
+            animation: slideIn 0.5s ease-in;
+            transition: all 0.3s ease;
+        }
+
+        .packet-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .packet-item.tcp { border-left-color: #2196F3; }
+        .packet-item.udp { border-left-color: #FF9800; }
+        .packet-item.icmp { border-left-color: #f44336; }
+        .packet-item.arp { border-left-color: #9C27B0; }
+        .packet-item.dns { border-left-color: #4CAF50; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Statistics */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 1.2em;
+            flex-direction: column;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 300px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .tooltip h4 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(76, 175, 80, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .tooltip-label {
+            color: #ccc;
+        }
+
+        .tooltip-value {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        /* Notification System */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+        }
+
+        .notification.error {
+            background: linear-gradient(45deg, #f44336, #da190b);
+        }
+
+        .notification.info {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+        }
+
+        .notification.warning {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .control-panel {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .control-btn {
+                width: 200px;
+            }
+            
+            .status-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🌐 Network Traffic Analyzer</h1>
+            <p>Real-time Network Visualization & Analysis Dashboard</p>
+            <div class="connection-indicator" id="connectionStatus"></div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <button class="control-btn start-btn" id="startBtn" onclick="startCapture()">
+                🚀 Start Capture
+            </button>
+            <button class="control-btn stop-btn" id="stopBtn" onclick="stopCapture()" disabled>
+                🛑 Stop Capture
+            </button>
+            <button class="control-btn local-btn" id="localBtn" onclick="toggleLocalOnly()">
+                🏠 Local Network Only
+            </button>
+            <button class="control-btn clear-btn" id="clearBtn" onclick="clearGraph()">
+                🗑️ Clear Graph
+            </button>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-card">
+                <h3>📦 Total Packets</h3>
+                <div class="value" id="totalPackets">0</div>
+            </div>
+            <div class="status-card">
+                <h3>⚡ Packets/sec</h3>
+                <div class="value" id="packetsRate">0</div>
+            </div>
+            <div class="status-card">
+                <h3>🌐 Active Nodes</h3>
+                <div class="value" id="activeNodes">0</div>
+            </div>
+            <div class="status-card">
+                <h3>🔗 Connections</h3>
+                <div class="value" id="connections">0</div>
+            </div>
+            <div class="status-card">
+                <h3>📊 Data Volume</h3>
+                <div class="value" id="dataVolume">0 KB</div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div class="dashboard">
+            <!-- Graph Panel -->
+            <div class="panel">
+                <h2>🕸️ Network Graph Visualization</h2>
+                
+                <!-- Graph Container -->
+                <div class="graph-container" id="graphContainer">
+                    <div class="network-canvas" id="networkCanvas">
+                        <!-- Network nodes will be rendered here -->
+                    </div>
+                    <div id="loading" class="loading">
+                        <div class="spinner"></div>
+                        <span>Waiting for network traffic...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Panel -->
+            <div class="panel">
+                <h2>📋 Network Information</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="uniqueIPs">0</div>
+                        <div class="stat-label">Unique IPs</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="protocols">0</div>
+                        <div class="stat-label">Protocols</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="avgPacketSize">0</div>
+                        <div class="stat-label">Avg Packet Size</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="captureTime">0s</div>
+                        <div class="stat-label">Capture Time</div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 20px 0 15px 0;">📦 Recent Packets</h3>
+                <div class="packet-list" id="packetList">
+                    <div style="text-align: center; opacity: 0.7; margin-top: 50px;">
+                        No packets captured yet
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tooltip -->
+        <div class="tooltip" id="tooltip"></div>
+        
+        <!-- Notification Container -->
+        <div id="notificationContainer"></div>
+    </div>
+
+    <script>
+        // Global variables
+        let ws = null;
+        let isConnected = false;
+        let isCapturing = false;
+        let localOnlyMode = false;
+        
+        // Data storage
+        let packets = [];
+        let nodes = new Map();
+        let connections = new Map();
+        
+        // Statistics
+        let stats = {
+            totalPackets: 0,
+            packetsPerSecond: 0,
+            startTime: null,
+            totalBytes: 0,
+            uniqueIPs: new Set(),
+            protocols: new Set()
+        };
+
+        // Load graph data from API
+        async function loadGraphData() {
+            try {
+                const response = await fetch('/api/graph');
+                if (response.ok) {
+                    const graphData = await response.json();
+                    processGraphData(graphData);
+                    renderNetworkGraph();
+                    console.log('📊 Graph data loaded from API');
+                } else {
+                    console.error('❌ Failed to load graph data:', response.statusText);
+                }
+            } catch (error) {
+                console.error('❌ Error loading graph data:', error);
+            }
+        }
+
+        // Load initial graph data with delay to ensure WebSocket connection
+        async function loadInitialGraphData() {
+            // Wait a bit for WebSocket to establish
+            setTimeout(async () => {
+                await loadGraphData();
+                // If we have nodes, render immediately
+                if (nodes.size > 0) {
+                    renderNetworkGraph();
+                    hideLoading();
+                }
+            }, 1000);
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+            updateUI();
+            loadInitialGraphData();
+            checkCaptureStatus(); // Check initial status
+            
+            // Start periodic graph data refresh
+            setInterval(loadGraphData, 10000); // Refresh every 10 seconds
+            
+            // Start periodic UI updates
+            setInterval(() => {
+                updateUI();
+                updatePacketList(); // Also update packet list periodically
+                checkCaptureStatus(); // Check capture status periodically
+            }, 2000); // Update UI every 2 seconds
+            
+            // Start optimized graph rendering for smooth time decay with performance control
+            setInterval(() => {
+                if (nodes.size > 0) {
+                    // Reduce render frequency when there are many nodes to prevent overlap issues
+                    const renderDelay = nodes.size > 20 ? 3000 : 2000;
+                    renderNetworkGraph();
+                }
+            }, 2000); // Base render interval
+            
+            console.log('🚀 Network Traffic Analyzer initialized');
+            showNotification('🚀 Dashboard initialized successfully', 'success');
+        });
+
+        // WebSocket connection
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function(event) {
+                isConnected = true;
+                updateConnectionStatus();
+                hideLoading();
+                console.log('✅ Connected to WebSocket server');
+                showNotification('✅ Connected to real-time feed', 'success');
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+            
+            ws.onclose = function(event) {
+                isConnected = false;
+                updateConnectionStatus();
+                showLoading();
+                console.log('🔌 WebSocket connection closed');
+                showNotification('⚠️ Connection lost, reconnecting...', 'warning');
+                
+                // Try to reconnect after 3 seconds
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            ws.onerror = function(error) {
+                console.error('❌ WebSocket error:', error);
+                showNotification('❌ Connection error', 'error');
+            };
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'packet_update':
+                    console.log('📦 Packet update received, isCapturing:', isCapturing);
+                    if (isCapturing) {
+                        handlePacketUpdate(data.packet);
+                    } else {
+                        console.log('⚠️  Ignoring packet update - capture not active');
+                    }
+                    break;
+                    
+                case 'graph_update':
+                    // Handle graph updates
+                    console.log('📊 Graph update received');
+                    if (data.graph) {
+                        processGraphData(data.graph);
+                        renderNetworkGraph();
+                    }
+                    break;
+                    
+                case 'connection_established':
+                    showNotification('🔗 Real-time connection established', 'info');
+                    break;
+                    
+                default:
+                    console.log('📨 Received:', data.type);
+            }
+        }
+
+        // Process graph data from API or WebSocket
+        function processGraphData(graphData) {
+            try {
+                // Preserve existing node positions before clearing
+                const nodePositions = new Map();
+                if (nodes.size > 0) {
+                    nodes.forEach((node, id) => {
+                        nodePositions.set(id, { x: node.x, y: node.y });
+                    });
+                }
+                
+                // Clear existing data
+                nodes.clear();
+                connections.clear();
+                
+                // Process nodes
+                if (graphData.nodes && Array.isArray(graphData.nodes)) {
+                    graphData.nodes.forEach(node => {
+                        // In local-only mode, show ONLY local IPs (strict mode)
+                        if (localOnlyMode && !isLocalIP(node.id)) {
+                            return; // Skip ALL external IPs in local-only mode
+                        }
+                        
+                        // Determine node type and color
+                        let nodeType = 'unknown';
+                        let isLocal = isLocalIP(node.id);
+                        
+                        if (isLocal) {
+                            nodeType = 'local';
+                        } else if (node.id.includes('8.8.8.8') || node.id.includes('1.1.1.1')) {
+                            nodeType = 'dns';
+                        } else if (node.ports && (node.ports.includes(80) || node.ports.includes(443))) {
+                            nodeType = 'web';
+                        } else {
+                            nodeType = 'external';
+                        }
+                        
+                        // Generate better positioned nodes using force-directed layout principles
+                        const canvasRect = document.getElementById('networkCanvas').getBoundingClientRect();
+                        let x, y;
+                        
+                        // Try to position nodes based on type for better organization
+                        if (localOnlyMode) {
+                            // In local-only mode, create a more organized central layout
+                            const centerX = canvasRect.width / 2;
+                            const centerY = canvasRect.height / 2;
+                            const radius = Math.min(canvasRect.width, canvasRect.height) * 0.3;
+                            
+                            if (isLocal) {
+                                // Local nodes in inner circle
+                                const angle = Math.random() * 2 * Math.PI;
+                                x = centerX + Math.cos(angle) * (radius * 0.5);
+                                y = centerY + Math.sin(angle) * (radius * 0.5);
+                            } else {
+                                // External nodes in outer circle
+                                const angle = Math.random() * 2 * Math.PI;
+                                x = centerX + Math.cos(angle) * radius;
+                                y = centerY + Math.sin(angle) * radius;
+                            }
+                        } else {
+                            // Standard positioning for full mode
+                            if (isLocal) {
+                                // Local nodes on the left side
+                                x = Math.random() * (canvasRect.width * 0.4) + 50;
+                                y = Math.random() * (canvasRect.height - 120) + 60;
+                            } else if (nodeType === 'dns') {
+                                // DNS servers at the top
+                                x = Math.random() * (canvasRect.width - 120) + 60;
+                                y = Math.random() * 100 + 30;
+                            } else if (nodeType === 'web') {
+                                // Web servers on the right side
+                                x = canvasRect.width * 0.6 + Math.random() * (canvasRect.width * 0.3);
+                                y = Math.random() * (canvasRect.height - 120) + 60;
+                            } else {
+                                // Other external nodes distributed
+                                x = canvasRect.width * 0.3 + Math.random() * (canvasRect.width * 0.4);
+                                y = canvasRect.height * 0.3 + Math.random() * (canvasRect.height * 0.4);
+                            }
+                        }
+                        
+                        // Simplified collision avoidance with guaranteed positioning
+                        let attempts = 0;
+                        let tooClose = true;
+                        const minDistance = 120; // Reduced from 140px for better fit
+                        const maxAttempts = 20; // Reduced attempts for better performance
+                        
+                        while (tooClose && attempts < maxAttempts) {
+                            tooClose = false;
+                            for (let [existingId, existingNode] of nodes) {
+                                if (existingId !== node.id) {
+                                    const dx = x - existingNode.x;
+                                    const dy = y - existingNode.y;
+                                    const distance = Math.sqrt(dx * dx + dy * dy);
+                                    
+                                    if (distance < minDistance) {
+                                        tooClose = true;
+                                        
+                                        // Simple repositioning - try a new random position
+                                        if (localOnlyMode) {
+                                            const centerX = canvasRect.width / 2;
+                                            const centerY = canvasRect.height / 2;
+                                            const radius = Math.min(canvasRect.width, canvasRect.height) * 0.35;
+                                            const angle = Math.random() * 2 * Math.PI;
+                                            
+                                            if (isLocal) {
+                                                x = centerX + Math.cos(angle) * (radius * 0.6);
+                                                y = centerY + Math.sin(angle) * (radius * 0.6);
+                                            } else {
+                                                x = centerX + Math.cos(angle) * radius;
+                                                y = centerY + Math.sin(angle) * radius;
+                                            }
+                                        } else {
+                                            // Try a different area based on node type
+                                            if (isLocal) {
+                                                x = Math.random() * (canvasRect.width * 0.4) + 50;
+                                                y = Math.random() * (canvasRect.height - 120) + 60;
+                                            } else {
+                                                x = canvasRect.width * 0.5 + Math.random() * (canvasRect.width * 0.45);
+                                                y = Math.random() * (canvasRect.height - 120) + 60;
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            attempts++;
+                        }
+                        
+                        // Always ensure node has valid position - never leave without coordinates
+                        if (attempts >= maxAttempts && tooClose) {
+                            // Fallback: use a spiral pattern to guarantee unique position
+                            const spiral = nodes.size * 15; // Spiral outward
+                            const angle = (nodes.size * 0.618) * 2 * Math.PI; // Golden angle
+                            x = canvasRect.width / 2 + Math.cos(angle) * spiral;
+                            y = canvasRect.height / 2 + Math.sin(angle) * spiral;
+                            
+                            // Keep within bounds
+                            x = Math.max(50, Math.min(canvasRect.width - 50, x));
+                            y = Math.max(50, Math.min(canvasRect.height - 50, y));
+                        }
+                        
+                        // Use existing position if node already exists (preserve user dragging and stability)
+                        const existingPosition = nodePositions.get(node.id);
+                        if (existingPosition) {
+                            x = existingPosition.x;
+                            y = existingPosition.y;
+                        } else if (!isCapturing) {
+                            // When not capturing, place new nodes at center to avoid layout jumps
+                            x = canvasRect.width / 2;
+                            y = canvasRect.height / 2;
+                        }
+                        
+                        // Calculate node size based on packet count - increased for better IP display
+                        const baseSize = 60; // Increased from 20 to 60 for better IP visibility
+                        const maxSize = 100; // Increased from 60 to 100
+                        const size = Math.min(maxSize, baseSize + (node.packet_count || 0) * 0.5);
+                        
+                        const processedNode = {
+                            id: node.id,
+                            label: node.label || node.id,
+                            x: x,
+                            y: y,
+                            size: size,
+                            type: nodeType,
+                            lastSeen: new Date(node.last_seen || Date.now()),
+                            firstSeen: new Date(node.first_seen || Date.now()),
+                            packetCount: node.packet_count || 0,
+                            bytesSent: node.bytes_sent || 0,
+                            bytesReceived: node.bytes_received || 0,
+                            protocols: node.protocols || [],
+                            ports: node.ports || [],
+                            nodeType: node.node_type || 'unknown'
+                        };
+                        
+                        nodes.set(node.id, processedNode);
+                    });
+                }
+                
+                // Process edges
+                if (graphData.edges && Array.isArray(graphData.edges)) {
+                    graphData.edges.forEach(edge => {
+                        // In local-only mode, show ONLY local-to-local connections (strict mode)
+                        if (localOnlyMode && (!isLocalIP(edge.source) || !isLocalIP(edge.target))) {
+                            return; // Skip connections involving any external IPs
+                        }
+                        
+                        // Also skip if source or target node was filtered out
+                        if (!nodes.has(edge.source) || !nodes.has(edge.target)) {
+                            return;
+                        }
+                        
+                        const connectionKey = `${edge.source}->${edge.target}`;
+                        const processedConnection = {
+                            source: edge.source,
+                            target: edge.target,
+                            lastSeen: new Date(edge.last_seen || Date.now()),
+                            firstSeen: new Date(edge.first_seen || Date.now()),
+                            packetCount: edge.packet_count || 0,
+                            totalBytes: edge.total_bytes || 0,
+                            protocols: edge.protocols || [],
+                            ports: edge.ports || [],
+                            weight: edge.weight || 1.0,
+                            flows: edge.flows || []
+                        };
+                        
+                        connections.set(connectionKey, processedConnection);
+                    });
+                }
+                
+                console.log(`📊 Processed graph data: ${nodes.size} nodes, ${connections.size} edges`);
+                
+                // Update UI after processing graph data
+                updateUI();
+                
+            } catch (error) {
+                console.error('❌ Error processing graph data:', error);
+            }
+        }
+
+        // Handle packet updates
+        function handlePacketUpdate(packet) {
+            console.log('📦 Processing packet update:', packet);
+            
+            // Apply local network filter
+            if (localOnlyMode && !isLocalNetworkPacket(packet)) {
+                console.log('⚠️  Packet filtered out by local network mode');
+                return;
+            }
+            
+            // Add packet to storage
+            packets.unshift(packet);
+            if (packets.length > 1000) {
+                packets = packets.slice(0, 1000);
+            }
+            
+            console.log(`📊 Updated stats: ${stats.totalPackets} total packets`);
+            
+            // Update statistics
+            updateStatistics(packet);
+            
+            // Update network visualization
+            updateNetworkVisualization(packet);
+            
+            // Update UI
+            updatePacketList();
+            updateUI();
+        }
+
+        // Check if packet is from local network
+        function isLocalNetworkPacket(packet) {
+            const localRanges = [
+                '192.168.', '10.', '172.16.', '172.17.', '172.18.', '172.19.',
+                '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
+                '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',
+                '127.', 'localhost'
+            ];
+            
+            const srcIP = packet.src_ip || '';
+            const dstIP = packet.dst_ip || '';
+            
+            return localRanges.some(range => 
+                srcIP.startsWith(range) || dstIP.startsWith(range)
+            );
+        }
+
+        // Check if IP is from local network
+        function isLocalIP(ip) {
+            const localRanges = [
+                // Standard private IP ranges (RFC 1918)
+                '192.168.', '10.', '172.16.', '172.17.', '172.18.', '172.19.',
+                '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
+                '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',
+                // Loopback and localhost
+                '127.', 'localhost',
+                // Common VM and container ranges
+                '192.168.122.', '192.168.99.', '192.168.56.', // VirtualBox/VMware common ranges
+                '10.0.2.', '10.0.0.', '10.1.1.', // VirtualBox NAT
+                '169.254.', // Link-local addresses
+                // Hyper-V common ranges
+                '192.168.137.', '192.168.138.', '192.168.139.'
+            ];
+            
+            return localRanges.some(range => ip.startsWith(range));
+        }
+
+        // Update network visualization
+        function updateNetworkVisualization(packet) {
+            const srcIP = packet.src_ip || 'unknown';
+            const dstIP = packet.dst_ip || 'unknown';
+            
+            // Filter out unknown or invalid packets
+            if (srcIP === 'unknown' || dstIP === 'unknown' || 
+                srcIP === '' || dstIP === '' ||
+                srcIP === '0.0.0.0' || dstIP === '0.0.0.0') {
+                console.log('🚫 Filtered out unknown packet:', srcIP, '->', dstIP);
+                return;
+            }
+            
+            const timestamp = new Date();
+            
+            // Add or update nodes
+            updateOrCreateNode(srcIP, timestamp, packet);
+            updateOrCreateNode(dstIP, timestamp, packet);
+            
+            // Create connection
+            const connectionId = `${srcIP}->${dstIP}`;
+            if (!connections.has(connectionId)) {
+                connections.set(connectionId, {
+                    source: srcIP,
+                    target: dstIP,
+                    count: 1,
+                    lastSeen: timestamp
+                });
+            } else {
+                connections.get(connectionId).count++;
+                connections.get(connectionId).lastSeen = timestamp;
+            }
+            
+            // Render the visualization
+            renderNetworkGraph();
+        }
+
+        // Update or create a network node
+        function updateOrCreateNode(ip, timestamp, packet) {
+            if (!nodes.has(ip)) {
+                nodes.set(ip, {
+                    id: ip,
+                    type: getNodeType(ip),
+                    x: Math.random() * 500 + 50,
+                    y: Math.random() * 400 + 50,
+                    size: 20,
+                    packetCount: 1,
+                    lastSeen: timestamp,
+                    protocols: new Set([packet.protocol])
+                });
+            } else {
+                const node = nodes.get(ip);
+                node.packetCount++;
+                node.lastSeen = timestamp;
+                node.protocols.add(packet.protocol);
+                node.size = Math.min(40, Math.max(15, node.packetCount / 10 + 15));
+            }
+        }
+
+        // Get node type based on IP
+        function getNodeType(ip) {
+            if (ip.startsWith('192.168.') || ip.startsWith('10.') || 
+                ip.startsWith('172.') || ip.startsWith('127.')) {
+                return 'local';
+            } else if (ip.endsWith('.255') || ip === '255.255.255.255') {
+                return 'broadcast';
+            } else if (ip.startsWith('224.') || ip.startsWith('239.')) {
+                return 'multicast';
+            } else {
+                return 'external';
+            }
+        }
+
+        // Render network graph
+        function renderNetworkGraph() {
+            const canvas = document.getElementById('networkCanvas');
+            canvas.innerHTML = '';
+            
+            if (nodes.size === 0) {
+                console.log('No nodes to render');
+                return;
+            }
+            
+            console.log(`Rendering ${nodes.size} nodes and ${connections.size} connections`);
+            hideLoading();
+            
+            // Apply time decay with more aggressive fading
+            const now = new Date();
+            const decayTime = 60000; // 60 seconds for full decay
+            const fadeStartTime = 10000; // Start fading after 10 seconds
+            
+            // Remove old connections
+            connections.forEach((connection, key) => {
+                const timeDiff = now - connection.lastSeen;
+                if (timeDiff > decayTime) {
+                    connections.delete(key);
+                }
+            });
+            
+            // Render connections first (so they appear behind nodes) with enhanced decay
+            connections.forEach(connection => {
+                const sourceNode = nodes.get(connection.source);
+                const targetNode = nodes.get(connection.target);
+                
+                if (sourceNode && targetNode) {
+                    const timeDiff = now - connection.lastSeen;
+                    let opacity = 1.0;
+                    let connectionType = 'normal';
+                    
+                    if (timeDiff > fadeStartTime) {
+                        const fadeProgress = (timeDiff - fadeStartTime) / (decayTime - fadeStartTime);
+                        opacity = Math.max(0.05, 1 - fadeProgress * 0.95); // More dramatic fade
+                        connectionType = 'aged';
+                    } else if (timeDiff < 2000) {
+                        // Fresh connections get enhanced visibility
+                        connectionType = 'fresh';
+                        opacity = Math.min(1.0, opacity * 1.2);
+                    }
+                    
+                    if (opacity > 0.05) {
+                        createConnectionElement(sourceNode, targetNode, opacity, connectionType);
+                    }
+                }
+            });
+            
+            // Remove old nodes
+            nodes.forEach((node, nodeId) => {
+                const timeDiff = now - node.lastSeen;
+                if (timeDiff > decayTime) {
+                    nodes.delete(nodeId);
+                }
+            });
+            
+            // Render nodes with enhanced time decay effects - ensure all nodes are visible
+            nodes.forEach(node => {
+                const timeDiff = now - node.lastSeen;
+                let opacity = 1.0;
+                let scale = 1.0;
+                let colorFilter = '';
+                let borderEffect = '';
+                
+                if (timeDiff > fadeStartTime) {
+                    const fadeProgress = (timeDiff - fadeStartTime) / (decayTime - fadeStartTime);
+                    
+                    // Less aggressive opacity fade to keep nodes visible
+                    opacity = Math.max(0.4, 1 - fadeProgress * 0.6);
+                    
+                    // Less dramatic size reduction
+                    scale = Math.max(0.7, 1 - fadeProgress * 0.3);
+                    
+                    // Color desaturation as nodes age
+                    const grayLevel = fadeProgress * 60; // Reduced to 60% for better visibility
+                    colorFilter = `grayscale(${grayLevel}%) brightness(${100 - fadeProgress * 20}%)`;
+                    
+                    // Pulsing border for aged nodes
+                    if (fadeProgress > 0.5) { // Changed threshold to 0.5
+                        borderEffect = 'aged';
+                    }
+                } else if (timeDiff < 2000) {
+                    // Recent nodes get a bright glow
+                    borderEffect = 'fresh';
+                    opacity = 1.0;
+                    scale = 1.0 + Math.sin(Date.now() / 500) * 0.05; // Subtle pulse
+                }
+                
+                // Always render nodes - removed opacity threshold
+                createNodeElement(node, opacity, scale, colorFilter, borderEffect);
+            });
+        }
+
+        // Create a visual node element with enhanced time decay effects
+        function createNodeElement(node, opacity, scale = 1.0, colorFilter = '', borderEffect = '') {
+            const nodeElement = document.createElement('div');
+            nodeElement.className = `network-node ${node.type}-node`;
+            nodeElement.style.left = node.x + 'px';
+            nodeElement.style.top = node.y + 'px';
+            
+            // Increase base node size to accommodate full IP addresses
+            const scaledSize = Math.max(80, node.size * scale); // Minimum 80px for full IP display
+            nodeElement.style.width = scaledSize + 'px';
+            nodeElement.style.height = scaledSize + 'px';
+            nodeElement.style.opacity = opacity;
+            
+            // Apply color filtering for time decay effects
+            if (colorFilter) {
+                nodeElement.style.filter = colorFilter;
+            }
+            
+            // Apply border effects based on node age
+            if (borderEffect === 'fresh') {
+                nodeElement.style.boxShadow = `0 0 ${scaledSize * 0.4}px rgba(0, 255, 0, 0.8), inset 0 0 ${scaledSize * 0.2}px rgba(255, 255, 255, 0.3)`;
+                nodeElement.style.border = '2px solid rgba(0, 255, 0, 0.6)';
+            } else if (borderEffect === 'aged') {
+                nodeElement.style.boxShadow = `0 0 ${scaledSize * 0.2}px rgba(255, 165, 0, 0.5)`;
+                nodeElement.style.border = '1px dashed rgba(255, 165, 0, 0.7)';
+            }
+            
+            // Adjust font size for better IP address readability
+            const fontSize = Math.max(9, Math.min(12, scaledSize / 8));
+            nodeElement.style.fontSize = fontSize + 'px';
+            nodeElement.style.lineHeight = '1.2';
+            nodeElement.style.padding = '2px';
+            nodeElement.style.textAlign = 'center';
+            nodeElement.style.display = 'flex';
+            nodeElement.style.alignItems = 'center';
+            nodeElement.style.justifyContent = 'center';
+            
+            // Add scale transform and enhanced styling for smooth animation
+            nodeElement.style.transform = `scale(${scale})`;
+            nodeElement.style.transition = 'opacity 0.5s ease, transform 0.4s ease, box-shadow 0.3s ease';
+            nodeElement.style.cursor = 'grab';
+            
+            // Enhanced visual effects based on node activity
+            const timeDiff = Date.now() - node.lastSeen;
+            if (timeDiff < 5000) { // Recent activity in last 5 seconds
+                nodeElement.style.boxShadow = `0 0 ${scaledSize * 0.3}px rgba(76, 175, 80, 0.6)`;
+                nodeElement.style.animation = 'pulse 2s infinite';
+            } else if (timeDiff < 30000) { // Moderate activity
+                nodeElement.style.boxShadow = `0 0 ${scaledSize * 0.2}px rgba(255, 193, 7, 0.4)`;
+            }
+            
+            // Show full IP address without truncation, with line breaks if needed
+            let displayIP = node.id;
+            if (displayIP.length > 15) {
+                // Split long IPs into multiple lines for better readability
+                const parts = displayIP.split('.');
+                if (parts.length === 4) {
+                    displayIP = `${parts[0]}.${parts[1]}\n${parts[2]}.${parts[3]}`;
+                }
+            }
+            
+            // Use innerHTML to support line breaks
+            nodeElement.innerHTML = displayIP.replace('\n', '<br>');
+            nodeElement.style.textShadow = '1px 1px 2px rgba(0,0,0,0.7)';
+            nodeElement.style.whiteSpace = 'nowrap';
+            nodeElement.style.overflow = 'visible';
+            
+            // Add hover events
+            nodeElement.addEventListener('mouseenter', (e) => showNodeTooltip(e, node));
+            nodeElement.addEventListener('mouseleave', hideTooltip);
+            nodeElement.addEventListener('mousemove', moveTooltip);
+            
+            // Add drag functionality (simplified)
+            nodeElement.addEventListener('mousedown', (e) => startDrag(e, node, nodeElement));
+            
+            document.getElementById('networkCanvas').appendChild(nodeElement);
+        }
+
+        // Create a visual connection element with enhanced effects
+        function createConnectionElement(sourceNode, targetNode, opacity, connectionType = 'normal') {
+            const connectionElement = document.createElement('div');
+            connectionElement.className = 'network-edge';
+            
+            const dx = targetNode.x - sourceNode.x;
+            const dy = targetNode.y - sourceNode.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            // Adjust connection thickness and opacity based on distance to reduce clutter
+            const maxDistance = 500;
+            const normalizedDistance = Math.min(length, maxDistance) / maxDistance;
+            let thickness = Math.max(1, 3 - normalizedDistance * 2); // Thinner for longer connections
+            
+            // Enhance thickness based on connection type
+            if (connectionType === 'fresh') {
+                thickness *= 1.5;
+            } else if (connectionType === 'aged') {
+                thickness *= 0.7;
+            }
+            const adjustedOpacity = opacity * (1 - normalizedDistance * 0.3); // Fade distant connections more
+            
+            connectionElement.style.left = (sourceNode.x + sourceNode.size / 2) + 'px';
+            connectionElement.style.top = (sourceNode.y + sourceNode.size / 2) + 'px';
+            connectionElement.style.width = length + 'px';
+            connectionElement.style.height = thickness + 'px';
+            connectionElement.style.transform = `rotate(${angle}deg)`;
+            connectionElement.style.opacity = Math.max(0.1, adjustedOpacity);
+            connectionElement.style.transition = 'opacity 0.5s ease, transform 0.3s ease';
+            connectionElement.style.borderRadius = '2px'; // Rounded edges for professional look
+            
+            // Enhanced styling based on connection type and age
+            if (connectionType === 'fresh') {
+                // Fresh connections get bright colors and glow
+                if (sourceNode.type === 'local' || targetNode.type === 'local') {
+                    connectionElement.style.background = 'linear-gradient(90deg, rgba(0, 255, 0, 0.8), rgba(0, 150, 255, 0.6))';
+                    connectionElement.style.boxShadow = '0 0 4px rgba(0, 255, 0, 0.6)';
+                } else {
+                    connectionElement.style.background = 'linear-gradient(90deg, rgba(255, 255, 0, 0.7), rgba(0, 255, 255, 0.5))';
+                    connectionElement.style.boxShadow = '0 0 3px rgba(255, 255, 0, 0.4)';
+                }
+            } else if (connectionType === 'aged') {
+                // Aged connections get muted, dashed appearance
+                connectionElement.style.background = 'linear-gradient(90deg, rgba(255, 140, 0, 0.4), rgba(255, 69, 0, 0.3))';
+                connectionElement.style.border = '1px dashed rgba(255, 140, 0, 0.5)';
+                connectionElement.style.boxShadow = 'none';
+            } else {
+                // Normal connections
+                if (sourceNode.type === 'local' || targetNode.type === 'local') {
+                    connectionElement.style.background = 'linear-gradient(90deg, rgba(76, 175, 80, 0.7), rgba(33, 150, 243, 0.4))';
+                    connectionElement.style.boxShadow = '0 0 2px rgba(76, 175, 80, 0.3)';
+                } else {
+                    connectionElement.style.background = 'linear-gradient(90deg, rgba(255, 255, 255, 0.5), rgba(147, 197, 253, 0.3))';
+                    connectionElement.style.boxShadow = '0 0 1px rgba(255, 255, 255, 0.2)';
+                }
+            }
+            
+            document.getElementById('networkCanvas').appendChild(connectionElement);
+        }
+
+        // Simple drag functionality
+        function startDrag(e, node, element) {
+            e.preventDefault();
+            let isDragging = true;
+            
+            const onMouseMove = (e) => {
+                if (isDragging) {
+                    const rect = document.getElementById('networkCanvas').getBoundingClientRect();
+                    node.x = Math.max(0, Math.min(rect.width - node.size, e.clientX - rect.left - node.size / 2));
+                    node.y = Math.max(0, Math.min(rect.height - node.size, e.clientY - rect.top - node.size / 2));
+                    
+                    element.style.left = node.x + 'px';
+                    element.style.top = node.y + 'px';
+                    
+                    // Update connections
+                    setTimeout(renderNetworkGraph, 10);
+                }
+            };
+            
+            const onMouseUp = () => {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+
+        // Show node tooltip
+        function showNodeTooltip(event, node) {
+            const tooltip = document.getElementById('tooltip');
+            const protocols = Array.from(node.protocols).join(', ');
+            const uptime = ((new Date() - node.lastSeen) / 1000).toFixed(0);
+            
+            tooltip.innerHTML = `
+                <h4>🌐 ${node.id}</h4>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Type:</span>
+                    <span class="tooltip-value">${node.type.toUpperCase()}</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Packets:</span>
+                    <span class="tooltip-value">${node.packetCount}</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Protocols:</span>
+                    <span class="tooltip-value">${protocols || 'None'}</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Last Activity:</span>
+                    <span class="tooltip-value">${uptime}s ago</span>
+                </div>
+            `;
+            
+            tooltip.classList.add('show');
+            moveTooltip(event);
+        }
+
+        function moveTooltip(event) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY - 10) + 'px';
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('show');
+        }
+
+        // Update statistics
+        function updateStatistics(packet) {
+            stats.totalPackets++;
+            stats.totalBytes += packet.length || 0;
+            stats.uniqueIPs.add(packet.src_ip);
+            stats.uniqueIPs.add(packet.dst_ip);
+            stats.protocols.add(packet.protocol);
+            
+            if (!stats.startTime) {
+                stats.startTime = new Date();
+            }
+            
+            // Calculate packets per second
+            const elapsed = (new Date() - stats.startTime) / 1000;
+            stats.packetsPerSecond = (stats.totalPackets / elapsed).toFixed(1);
+        }
+
+        // Update packet list
+        function updatePacketList() {
+            const container = document.getElementById('packetList');
+            let html = '';
+            
+            const recentPackets = packets.slice(0, 20);
+            
+            for (const packet of recentPackets) {
+                const protocol = (packet.protocol || 'OTHER').toLowerCase();
+                const time = new Date(packet.capture_timestamp || Date.now());
+                const srcIP = packet.src_ip || 'unknown';
+                const dstIP = packet.dst_ip || 'unknown';
+                
+                // Filter out unknown packets from packet list display
+                if (srcIP === 'unknown' || dstIP === 'unknown' || 
+                    srcIP === '' || dstIP === '' ||
+                    srcIP === '0.0.0.0' || dstIP === '0.0.0.0') {
+                    continue;
+                }
+                
+                const length = packet.length || 0;
+                
+                html += `
+                    <div class="packet-item ${protocol}">
+                        <div><strong>${time.toLocaleTimeString()}</strong></div>
+                        <div>${srcIP} → ${dstIP}</div>
+                        <div>${protocol.toUpperCase()} | ${length} bytes</div>
+                    </div>
+                `;
+            }
+            
+            if (html === '') {
+                html = '<div style="text-align: center; opacity: 0.7; margin-top: 50px;">No packets captured yet</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Update UI elements
+        function updateUI() {
+            document.getElementById('totalPackets').textContent = stats.totalPackets;
+            document.getElementById('packetsRate').textContent = stats.packetsPerSecond || '0.0';
+            document.getElementById('activeNodes').textContent = nodes.size;
+            document.getElementById('connections').textContent = connections.size;
+            document.getElementById('dataVolume').textContent = formatBytes(stats.totalBytes);
+            
+            document.getElementById('uniqueIPs').textContent = stats.uniqueIPs.size;
+            document.getElementById('protocols').textContent = stats.protocols.size;
+            
+            if (stats.totalPackets > 0) {
+                document.getElementById('avgPacketSize').textContent = 
+                    Math.round(stats.totalBytes / stats.totalPackets);
+            }
+            
+            if (stats.startTime) {
+                const elapsed = Math.floor((new Date() - stats.startTime) / 1000);
+                document.getElementById('captureTime').textContent = elapsed + 's';
+            }
+            
+            // Auto-refresh network visualization every 2 seconds
+            if (nodes.size > 0) {
+                setTimeout(renderNetworkGraph, 2000);
+            }
+        }
+
+        // Update connection status
+        function updateConnectionStatus() {
+            const status = document.getElementById('connectionStatus');
+            status.className = `connection-indicator ${isConnected ? 'connected' : 'disconnected'}`;
+        }
+
+        // Control functions
+        async function startCapture() {
+            try {
+                const response = await fetch('/api/capture/start', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.status === 'started' || data.status === 'already_running') {
+                    isCapturing = true;
+                    stats.startTime = new Date();
+                    
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    
+                    console.log('🚀 Packet capture started');
+                    showNotification('🚀 Packet capture started', 'success');
+                } else {
+                    showNotification('❌ Failed to start capture: ' + data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error starting capture:', error);
+                showNotification('❌ Error starting capture', 'error');
+            }
+        }
+
+        async function stopCapture() {
+            try {
+                const response = await fetch('/api/capture/stop', { method: 'POST' });
+                
+                // Check if response is ok before parsing JSON
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === 'stopped') {
+                    isCapturing = false;
+                    
+                    // Clear recent packets when capture stops
+                    packets = [];
+                    updatePacketList(); // Use the correct function name
+                    
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                    
+                    console.log('🛑 Packet capture stopped');
+                    showNotification('🛑 Packet capture stopped', 'info');
+                } else {
+                    showNotification(`❌ Error stopping capture: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error stopping capture:', error);
+                showNotification(`❌ Error stopping capture: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkCaptureStatus() {
+            try {
+                const response = await fetch('/api/capture/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    const wasCapturing = isCapturing;
+                    isCapturing = data.is_capturing;
+                    
+                    // Update UI based on actual status
+                    document.getElementById('startBtn').disabled = isCapturing;
+                    document.getElementById('stopBtn').disabled = !isCapturing;
+                    
+                    // If capture stopped externally, clear packets
+                    if (wasCapturing && !isCapturing) {
+                        packets = [];
+                        updatePacketList();
+                        console.log('🛑 Capture stopped (detected via status check)');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking capture status:', error);
+            }
+        }
+
+        async function toggleLocalOnly() {
+            try {
+                localOnlyMode = !localOnlyMode;
+                const response = await fetch(`/api/capture/local-mode/${localOnlyMode}`, { method: 'POST' });
+                const data = await response.json();
+                
+                const btn = document.getElementById('localBtn');
+                
+                if (data.status === 'success') {
+                    if (localOnlyMode) {
+                        btn.style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+                        btn.textContent = '🏠 Local Mode ON';
+                        showNotification('🏠 Local network mode enabled', 'success');
+                    } else {
+                        btn.style.background = 'linear-gradient(45deg, #ff9800, #f57c00)';
+                        btn.textContent = '🏠 Local Network Only';
+                        showNotification('🌐 All network traffic mode enabled', 'info');
+                    }
+                    
+                    // Refresh graph with new filter
+                    await loadGraphData();
+                    
+                    console.log(`🏠 Local only mode: ${localOnlyMode ? 'ON' : 'OFF'}`);
+                } else {
+                    // Revert state on error
+                    localOnlyMode = !localOnlyMode;
+                    showNotification('❌ Failed to toggle local mode: ' + data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error toggling local mode:', error);
+                localOnlyMode = !localOnlyMode; // Revert state
+                showNotification('❌ Error toggling local mode', 'error');
+            }
+        }
+
+        async function clearGraph() {
+            try {
+                const response = await fetch('/api/graph/clear', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Clear local data
+                    nodes.clear();
+                    connections.clear();
+                    packets = [];
+                    
+                    stats = {
+                        totalPackets: 0,
+                        packetsPerSecond: 0,
+                        startTime: null,
+                        totalBytes: 0,
+                        uniqueIPs: new Set(),
+                        protocols: new Set()
+                    };
+                    
+                    renderNetworkGraph();
+                    updatePacketList();
+                    updateUI();
+                    showLoading();
+                    
+                    console.log('🗑️ Graph cleared');
+                    showNotification('🗑️ Graph data cleared', 'info');
+                } else {
+                    showNotification('❌ Failed to clear graph: ' + data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error clearing graph:', error);
+                showNotification('❌ Error clearing graph', 'error');
+            }
+        }
+
+        // Utility functions
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            container.appendChild(notification);
+            
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            // Hide and remove notification
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 4000);
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Auto-refresh UI every 2 seconds
+        setInterval(updateUI, 2000);
+    </script>
+</body>
+</html>

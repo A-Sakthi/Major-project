@@ -1,0 +1,56 @@
+# Python Network Traffic Analyzer
+# Dependencies for real-time packet capture, graph analysis, and web interface
+
+# Core networking and packet capture
+scapy>=2.5.0                # Real-time packet capture and analysis
+# netifaces>=0.11.0         # Network interface discovery (optional, requires build tools on Windows)
+
+# Graph analysis and mathematical operations
+networkx>=3.0               # Graph construction and analysis
+numpy>=1.24.0               # Numerical operations and feature extraction
+scipy>=1.10.0               # Advanced mathematical functions
+
+# Data handling and statistics
+pandas>=2.0.0               # Data manipulation and analysis
+matplotlib>=3.7.0           # Basic plotting capabilities
+seaborn>=0.12.0            # Statistical visualization
+
+# Web framework and API
+fastapi>=0.100.0            # Modern async web framework
+uvicorn>=0.23.0            # ASGI server for FastAPI
+websockets>=11.0           # WebSocket support for real-time updates
+python-multipart>=0.0.6    # Form data parsing
+
+# Additional web utilities
+jinja2>=3.1.0              # Template engine
+python-jose[cryptography]>=3.3.0  # JWT token handling
+passlib[bcrypt]>=1.7.0     # Password hashing
+
+# Development and testing
+pytest>=7.4.0              # Testing framework
+pytest-asyncio>=0.21.0     # Async testing support
+black>=23.0.0              # Code formatting
+flake8>=6.0.0              # Code linting
+
+# System and environment
+psutil>=5.9.0              # System monitoring
+python-dotenv>=1.0.0       # Environment variable management
+
+# Optional: Advanced ML features (uncomment if needed)
+# scikit-learn>=1.3.0       # Machine learning algorithms  
+# tensorflow>=2.13.0        # Deep learning (if implementing ML models)
+# torch>=2.0.0              # PyTorch alternative
+
+# Optional: Database support (uncomment if persistent storage needed)
+# sqlalchemy>=2.0.0         # Database ORM
+# alembic>=1.11.0           # Database migrations
+# asyncpg>=0.28.0           # Async PostgreSQL driver
+# aiosqlite>=0.19.0         # Async SQLite driver
+
+# Optional: Redis for caching/session storage
+# redis>=4.6.0              # Redis client
+# aioredis>=2.0.0           # Async Redis client
+
+# Production deployment (uncomment for production)
+# gunicorn>=21.0.0          # WSGI server for production
+# nginx                     # Reverse proxy (system package)

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Traffic Analyzer - Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+        .status {
+            font-size: 1.5em;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(76, 175, 80, 0.2);
+            border-radius: 10px;
+            border: 2px solid #4CAF50;
+        }
+        button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🌐 Network Traffic Analyzer</h1>
+        <div class="status">
+            ✅ Web Server is Working!
+        </div>
+        <p>If you can see this page, the web server is running correctly.</p>
+        
+        <button onclick="testAPI()">🔧 Test API Connection</button>
+        <button onclick="loadFullDashboard()">🚀 Load Full Dashboard</button>
+        
+        <div id="result" style="margin-top: 30px;"></div>
+    </div>
+
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<p>🔄 Testing API connection...</p>';
+            
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <div style="background: rgba(76, 175, 80, 0.2); padding: 20px; border-radius: 10px; margin-top: 20px;">
+                        <h3>✅ API Connection Successful!</h3>
+                        <p><strong>Status:</strong> ${data.status}</p>
+                        <p><strong>Uptime:</strong> ${Math.round(data.uptime)} seconds</p>
+                        <p><strong>Active Connections:</strong> ${data.active_connections}</p>
+                    </div>
+                `;
+            } catch (error) {
+                result.innerHTML = `
+                    <div style="background: rgba(244, 67, 54, 0.2); padding: 20px; border-radius: 10px; margin-top: 20px;">
+                        <h3>❌ API Connection Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function loadFullDashboard() {
+            window.location.href = '/dashboard';
+        }
+        
+        // Auto-test API on load
+        window.addEventListener('load', testAPI);
+    </script>
+</body>
+</html>

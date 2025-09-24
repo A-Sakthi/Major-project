@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.pyc
+*.egg-info/
+dist/
+build/
+.env
+.venv
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Project specific
+*.exe
+*.msi
+*.pkg
+*.dmg
+node_modules/
+
+# Don't include dataset
+Dataset/
+data/
+*.csv
